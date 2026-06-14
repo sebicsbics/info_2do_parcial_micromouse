@@ -30,6 +30,9 @@ var _celdas_visitadas: Dictionary = {}
 var _pantalla_final: CanvasLayer = null
 var _pasos_exploracion: int = 0
 var _cerebro_fase_anterior = null
+var _records := ConfigFile.new()
+var _selector: OptionButton
+var _archivos_maz: Array[String] = []
 
 var _sfx_paso: AudioStreamPlayer
 var _sfx_choque: AudioStreamPlayer
@@ -57,6 +60,9 @@ func _ready() -> void:
 	if usar_cerebro_estudiante:
 		var ce := cerebro as CerebroEstudiante
 		vista_mapa_raton.configurar(ce.mapa, ORIGEN, tam_celda)
+	_records.load("user://records.cfg")
+	_crear_selector()
+	_mostrar_record()
 
 
 func _process(delta: float) -> void:
@@ -96,6 +102,52 @@ func _on_paso_timer_timeout() -> void:
 		_meta_alcanzada()
 
 
+func _crear_selector() -> void:
+	var dir := DirAccess.open("res://mazes")
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var nombre := dir.get_next()
+	while nombre != "":
+		if nombre.ends_with(".maz"):
+			_archivos_maz.append("res://mazes/" + nombre)
+		nombre = dir.get_next()
+	_archivos_maz.sort()
+	_selector = OptionButton.new()
+	for ruta in _archivos_maz:
+		_selector.add_item(ruta.get_file().get_basename())
+	var idx := _archivos_maz.find(archivo_laberinto)
+	if idx >= 0:
+		_selector.select(idx)
+	_selector.item_selected.connect(_on_selector_changed)
+	$ui/hud/margen/columna.add_child(_selector)
+
+
+func _on_selector_changed(idx: int) -> void:
+	archivo_laberinto = _archivos_maz[idx]
+	laberinto = Laberinto.desde_archivo(archivo_laberinto)
+	tam_celda = minf(56.0, 608.0 / maxf(laberinto.ancho, laberinto.alto))
+	vista_dios.configurar(laberinto, ORIGEN, tam_celda)
+	_mostrar_record()
+	_on_boton_reiniciar_pressed()
+
+
+func _guardar_record(pasos: int) -> void:
+	var actual: int = _records.get_value("records", archivo_laberinto, INF)
+	if pasos < actual:
+		_records.set_value("records", archivo_laberinto, pasos)
+		_records.save("user://records.cfg")
+		_mostrar_record()
+
+
+func _mostrar_record() -> void:
+	var r: int = _records.get_value("records", archivo_laberinto, 0)
+	if r > 0:
+		$ui/hud/margen/columna/record_label.text = "récord: %d pasos" % r
+	else:
+		$ui/hud/margen/columna/record_label.text = "récord: —"
+
+
 func _crear_sfx(ruta: String) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
 	player.stream = load(ruta)
@@ -108,6 +160,10 @@ func _meta_alcanzada() -> void:
 	paso_timer.stop()
 	fase_cambiada.emit("FIN")
 	_sfx_meta.play()
+	if usar_cerebro_estudiante:
+		var ce := cerebro as CerebroEstudiante
+		if ce.ruta_speed_run.size() > 0:
+			_guardar_record(ce.ruta_speed_run.size())
 	_mostrar_pantalla_final()
 
 

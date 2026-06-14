@@ -18,6 +18,8 @@ en [enunciado.md](enunciado.md).
 - **B4** Efectos de sonido: paso, choque, meta
 - **M1** Cerebro con flood-fill: mapa propio, sensado, exploración guiada
 - **M2** Mapa dual: vista derecha con celdas visitadas/no visitadas en vivo
+- **M3** Speed run: regresa al inicio y ejecuta la ruta óptima sin sensar, ambas rutas dibujadas
+- **M4** Selector de laberintos data-driven y récord por laberinto persistido en `user://`
 
 ## Recursos externos
 
