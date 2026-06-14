@@ -25,14 +25,16 @@ var cerebro = null
 @onready var raton: Raton = $raton
 @onready var paso_timer: Timer = $paso_timer
 
-# === ESTADO DE LA CORRIDA (B3) ===
-# Contrato sugerido para comunicarte con el HUD (hud.gd) sin acoplarlos:
-#   signal pasos_cambiados(pasos: int)
-#   signal visitadas_cambiadas(cantidad: int)
-#   signal fase_cambiada(nombre: String)
-#   signal corrida_terminada(exito: bool, pasos: int)
-# TODO (PARCIAL · B1/B3): declara el estado de la corrida (fase, cronómetro,
-# celdas visitadas) y sus señales.
+# === ESTADO DE LA CORRIDA ===
+signal pasos_cambiados(pasos: int)
+signal visitadas_cambiadas(cantidad: int)
+signal fase_cambiada(nombre: String)
+signal tiempo_cambiado(segundos: float)
+
+var _pasos: int = 0
+var _visitadas: int = 0
+var _tiempo: float = 0.0
+var _celdas_visitadas: Dictionary = {}
 
 
 func _ready() -> void:
@@ -46,17 +48,29 @@ func _ready() -> void:
 				laberinto.inicio)
 	else:
 		cerebro = CerebroWallFollower.new()
-	# La vista derecha ("mapa del ratón") queda vacía hasta que la conectes:
+	_celdas_visitadas[raton.celda] = true
+	fase_cambiada.emit("EXPLORANDO")
 	# TODO (PARCIAL · M2): configura vista_mapa_raton con el laberinto que TU
 	# cerebro descubre (Laberinto.vacio + poner_pared al sensar) y redibuja
 	# cada vez que aprenda una pared. Distingue visitadas / no visitadas.
+
+
+func _process(delta: float) -> void:
+	if not paso_timer.is_stopped():
+		_tiempo += delta
+		tiempo_cambiado.emit(_tiempo)
 
 
 func _on_paso_timer_timeout() -> void:
 	if raton.ocupado():
 		return
 	cerebro.paso(raton)
-	# TODO (PARCIAL · B1): actualiza pasos / visitadas / cronómetro en el HUD.
+	_pasos = raton.pasos
+	pasos_cambiados.emit(_pasos)
+	if not _celdas_visitadas.has(raton.celda):
+		_celdas_visitadas[raton.celda] = true
+		_visitadas = _celdas_visitadas.size()
+		visitadas_cambiadas.emit(_visitadas)
 	if laberinto.es_meta(raton.celda):
 		_meta_alcanzada()
 
