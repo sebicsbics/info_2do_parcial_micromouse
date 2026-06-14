@@ -29,6 +29,10 @@ var _tiempo: float = 0.0
 var _celdas_visitadas: Dictionary = {}
 var _pantalla_final: CanvasLayer = null
 
+var _sfx_paso: AudioStreamPlayer
+var _sfx_choque: AudioStreamPlayer
+var _sfx_meta: AudioStreamPlayer
+
 
 func _ready() -> void:
 	laberinto = Laberinto.desde_archivo(archivo_laberinto)
@@ -43,6 +47,11 @@ func _ready() -> void:
 		cerebro = CerebroWallFollower.new()
 	_celdas_visitadas[raton.celda] = true
 	fase_cambiada.emit("EXPLORANDO")
+	_sfx_paso = _crear_sfx("res://assets/sounds/paso.wav")
+	_sfx_choque = _crear_sfx("res://assets/sounds/choque.wav")
+	_sfx_meta = _crear_sfx("res://assets/sounds/meta.wav")
+	raton.paso_terminado.connect(func(): _sfx_paso.play())
+	raton.choque.connect(func(): _sfx_choque.play())
 	# TODO (PARCIAL · M2): configura vista_mapa_raton con el laberinto que TU
 	# cerebro descubre (Laberinto.vacio + poner_pared al sensar) y redibuja
 	# cada vez que aprenda una pared. Distingue visitadas / no visitadas.
@@ -68,10 +77,18 @@ func _on_paso_timer_timeout() -> void:
 		_meta_alcanzada()
 
 
+func _crear_sfx(ruta: String) -> AudioStreamPlayer:
+	var player := AudioStreamPlayer.new()
+	player.stream = load(ruta)
+	add_child(player)
+	return player
+
+
 func _meta_alcanzada() -> void:
 	_fase = Fase.FIN
 	paso_timer.stop()
 	fase_cambiada.emit("FIN")
+	_sfx_meta.play()
 	_mostrar_pantalla_final()
 
 
