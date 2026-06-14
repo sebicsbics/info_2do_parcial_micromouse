@@ -28,6 +28,8 @@ var _visitadas: int = 0
 var _tiempo: float = 0.0
 var _celdas_visitadas: Dictionary = {}
 var _pantalla_final: CanvasLayer = null
+var _pasos_exploracion: int = 0
+var _cerebro_fase_anterior = null
 
 var _sfx_paso: AudioStreamPlayer
 var _sfx_choque: AudioStreamPlayer
@@ -77,7 +79,20 @@ func _on_paso_timer_timeout() -> void:
 		var ce := cerebro as CerebroEstudiante
 		vista_mapa_raton.visitadas = ce.visitadas
 		vista_mapa_raton.queue_redraw()
-	if laberinto.es_meta(raton.celda):
+		if ce.fase != _cerebro_fase_anterior:
+			_cerebro_fase_anterior = ce.fase
+			match ce.fase:
+				CerebroEstudiante.Fase.VOLVIENDO:
+					_pasos_exploracion = _pasos
+					fase_cambiada.emit("VOLVIENDO")
+				CerebroEstudiante.Fase.SPEED_RUN:
+					vista_dios.ruta_a = ce.ruta_exploracion
+					vista_dios.ruta_b = ce.ruta_speed_run
+					vista_dios.queue_redraw()
+					fase_cambiada.emit("SPEED RUN")
+				CerebroEstudiante.Fase.LISTO:
+					_meta_alcanzada()
+	elif laberinto.es_meta(raton.celda):
 		_meta_alcanzada()
 
 
@@ -115,8 +130,14 @@ func _mostrar_pantalla_final() -> void:
 	caja.add_child(titulo)
 
 	var pasos_lbl := Label.new()
-	pasos_lbl.text = "Pasos de exploración: %d" % _pasos
+	pasos_lbl.text = "Pasos de exploración: %d" % _pasos_exploracion
 	caja.add_child(pasos_lbl)
+
+	if usar_cerebro_estudiante:
+		var ce := cerebro as CerebroEstudiante
+		var pasos_sr := Label.new()
+		pasos_sr.text = "Pasos de speed run: %d" % ce.ruta_speed_run.size()
+		caja.add_child(pasos_sr)
 
 	var tiempo_lbl := Label.new()
 	tiempo_lbl.text = "Tiempo: %.1f s" % _tiempo

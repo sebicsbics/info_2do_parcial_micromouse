@@ -15,6 +15,8 @@ var laberinto: Laberinto = null
 var origen := Vector2.ZERO
 var tam := 32.0
 var visitadas: Dictionary = {}
+var ruta_a: Array[Vector2i] = []
+var ruta_b: Array[Vector2i] = []
 
 @export var color_paredes := Color(0.92, 0.92, 0.95)
 @export var color_rejilla := Color(0.22, 0.22, 0.28)
@@ -22,6 +24,8 @@ var visitadas: Dictionary = {}
 @export var color_inicio := Color(0.25, 0.45, 0.85, 0.45)
 @export var color_visitada := Color(0.35, 0.35, 0.45, 0.6)
 @export var color_no_visitada := Color(0.15, 0.15, 0.20, 0.6)
+@export var color_ruta_a := Color(1.0, 0.6, 0.1, 0.8)
+@export var color_ruta_b := Color(0.2, 0.9, 0.4, 0.9)
 @export var grosor_pared := 3.0
 
 
@@ -74,3 +78,10 @@ func _draw() -> void:
 			if col == laberinto.ancho - 1 and laberinto.tiene_pared(celda, Laberinto.ESTE):
 				draw_line(esquina + Vector2(tam, 0), esquina + Vector2(tam, tam),
 						color_paredes, grosor_pared)
+	_dibujar_ruta(ruta_a, color_ruta_a)
+	_dibujar_ruta(ruta_b, color_ruta_b)
+
+
+func _dibujar_ruta(ruta: Array[Vector2i], color: Color) -> void:
+	for i in range(1, ruta.size()):
+		draw_line(celda_a_pixel(ruta[i - 1]), celda_a_pixel(ruta[i]), color, 3.0)
