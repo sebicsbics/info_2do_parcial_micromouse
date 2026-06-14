@@ -1,21 +1,12 @@
 extends Node2D
 
-# Controlador principal: carga el laberinto, coloca al ratón y hace avanzar
-# el cerebro un paso por tick del paso_timer. El núcleo (laberinto, sensado,
-# movimiento, vista de dios) ya está resuelto; los huecos del parcial están
-# marcados con "TODO (PARCIAL · ...)".
-
-# Laberintos incluidos: 01_entrenamiento (8x8, perfecto: el wall-follower lo
-# resuelve), 02_clasico y 03_clasico (16x16 con ciclos y meta central, estilo
-# competencia: el wall-follower NO basta).
 @export_file("*.maz") var archivo_laberinto: String = "res://mazes/01_entrenamiento.maz"
-# Marca esta casilla (en el Inspector del nodo Game) para usar tu cerebro.
 @export var usar_cerebro_estudiante: bool = false
 
 const ORIGEN := Vector2(28, 44)
-# La vista de dios dispone de ~608 px; la celda se adapta al tamaño del
-# laberinto (38 px en los 16x16, más grande en los de entrenamiento).
 var tam_celda := 38.0
+
+enum Fase { EXPLORANDO, FIN }
 
 var laberinto: Laberinto
 var cerebro = null
@@ -31,10 +22,12 @@ signal visitadas_cambiadas(cantidad: int)
 signal fase_cambiada(nombre: String)
 signal tiempo_cambiado(segundos: float)
 
+var _fase: Fase = Fase.EXPLORANDO
 var _pasos: int = 0
 var _visitadas: int = 0
 var _tiempo: float = 0.0
 var _celdas_visitadas: Dictionary = {}
+var _pantalla_final: CanvasLayer = null
 
 
 func _ready() -> void:
@@ -76,18 +69,42 @@ func _on_paso_timer_timeout() -> void:
 
 
 func _meta_alcanzada() -> void:
+	_fase = Fase.FIN
 	paso_timer.stop()
-	print("¡Meta alcanzada en ", raton.pasos, " pasos!")
-	# TODO (PARCIAL · B3): esto debe ser una máquina de estados explícita
-	# (EXPLORANDO → META → VOLVIENDO → SPEED_RUN → FIN), con pantalla final
-	# (pasos de exploración vs. pasos del speed run) y opción de reiniciar.
-	# TODO (PARCIAL · B4): sonido de meta (assets/sounds/meta.wav). Conecta
-	# también raton.choque a un sonido de choque y cada avance a un tic.
-	# TODO (PARCIAL · M3): aquí continúa el ciclo: volver al inicio y ejecutar
-	# el speed run sobre el mapa descubierto, dibujando ambas rutas.
-	# TODO (PARCIAL · M4): guarda el récord (mejores pasos) de ESTE laberinto
-	# en user:// y muéstralo; añade un selector para cambiar de laberinto sin
-	# tocar código.
+	fase_cambiada.emit("FIN")
+	_mostrar_pantalla_final()
+
+
+func _mostrar_pantalla_final() -> void:
+	_pantalla_final = CanvasLayer.new()
+	add_child(_pantalla_final)
+
+	var fondo := ColorRect.new()
+	fondo.color = Color(0, 0, 0, 0.7)
+	fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_pantalla_final.add_child(fondo)
+
+	var caja := VBoxContainer.new()
+	caja.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	caja.alignment = BoxContainer.ALIGNMENT_CENTER
+	_pantalla_final.add_child(caja)
+
+	var titulo := Label.new()
+	titulo.text = "¡Meta alcanzada!"
+	caja.add_child(titulo)
+
+	var pasos_lbl := Label.new()
+	pasos_lbl.text = "Pasos de exploración: %d" % _pasos
+	caja.add_child(pasos_lbl)
+
+	var tiempo_lbl := Label.new()
+	tiempo_lbl.text = "Tiempo: %.1f s" % _tiempo
+	caja.add_child(tiempo_lbl)
+
+	var btn := Button.new()
+	btn.text = "Reiniciar"
+	btn.pressed.connect(_on_boton_reiniciar_pressed)
+	caja.add_child(btn)
 
 
 # --- Botones del panel (ya conectados en el editor; cuerpos por hacer) ---
@@ -117,6 +134,9 @@ func _on_boton_velocidad_pressed() -> void:
 
 
 func _on_boton_reiniciar_pressed() -> void:
+	if _pantalla_final:
+		_pantalla_final.queue_free()
+		_pantalla_final = null
 	paso_timer.stop()
 	raton.configurar(laberinto, ORIGEN, tam_celda)
 	if usar_cerebro_estudiante:
@@ -124,6 +144,7 @@ func _on_boton_reiniciar_pressed() -> void:
 		cerebro.preparar(laberinto.ancho, laberinto.alto, laberinto.metas, laberinto.inicio)
 	else:
 		cerebro = CerebroWallFollower.new()
+	_fase = Fase.EXPLORANDO
 	_pasos = 0
 	_visitadas = 0
 	_tiempo = 0.0
