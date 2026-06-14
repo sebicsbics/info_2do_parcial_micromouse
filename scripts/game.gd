@@ -93,24 +93,44 @@ func _meta_alcanzada() -> void:
 # --- Botones del panel (ya conectados en el editor; cuerpos por hacer) ---
 
 func _on_boton_pausa_pressed() -> void:
-	# TODO (PARCIAL · B2): pausa/reanuda la corrida (paso_timer) y refleja el
-	# estado en el texto del botón.
-	pass
+	if paso_timer.is_stopped():
+		paso_timer.start()
+		$ui/hud/margen/columna/botones/boton_pausa.text = "Pausa"
+	else:
+		paso_timer.stop()
+		$ui/hud/margen/columna/botones/boton_pausa.text = "Reanudar"
 
 
 func _on_boton_paso_pressed() -> void:
-	# TODO (PARCIAL · B2): con la corrida pausada, ejecuta UN solo paso del
-	# cerebro (depuración paso a paso).
-	pass
+	if paso_timer.is_stopped():
+		_on_paso_timer_timeout()
 
 
 func _on_boton_velocidad_pressed() -> void:
-	# TODO (PARCIAL · B2): cicla la velocidad (p. ej. x1 → x2 → x4 cambiando
-	# paso_timer.wait_time y raton.duracion_paso).
-	pass
+	var velocidades := [0.12, 0.06, 0.03]
+	var etiquetas := ["Vel x1", "Vel x2", "Vel x4"]
+	var idx := velocidades.find(paso_timer.wait_time)
+	idx = (idx + 1) % velocidades.size()
+	paso_timer.wait_time = velocidades[idx]
+	raton.duracion_paso = velocidades[idx] * 0.8
+	$ui/hud/margen/columna/botones/boton_velocidad.text = etiquetas[idx]
 
 
 func _on_boton_reiniciar_pressed() -> void:
-	# TODO (PARCIAL · B2): reinicia la corrida completa: ratón al inicio,
-	# cerebro nuevo, contadores a cero, timer corriendo.
-	pass
+	paso_timer.stop()
+	raton.configurar(laberinto, ORIGEN, tam_celda)
+	if usar_cerebro_estudiante:
+		cerebro = CerebroEstudiante.new()
+		cerebro.preparar(laberinto.ancho, laberinto.alto, laberinto.metas, laberinto.inicio)
+	else:
+		cerebro = CerebroWallFollower.new()
+	_pasos = 0
+	_visitadas = 0
+	_tiempo = 0.0
+	_celdas_visitadas = {raton.celda: true}
+	pasos_cambiados.emit(0)
+	visitadas_cambiadas.emit(1)
+	tiempo_cambiado.emit(0.0)
+	fase_cambiada.emit("EXPLORANDO")
+	$ui/hud/margen/columna/botones/boton_pausa.text = "Pausa"
+	paso_timer.start()
