@@ -14,11 +14,14 @@ extends Node2D
 var laberinto: Laberinto = null
 var origen := Vector2.ZERO
 var tam := 32.0
+var visitadas: Dictionary = {}
 
 @export var color_paredes := Color(0.92, 0.92, 0.95)
 @export var color_rejilla := Color(0.22, 0.22, 0.28)
 @export var color_meta := Color(0.25, 0.65, 0.30, 0.45)
 @export var color_inicio := Color(0.25, 0.45, 0.85, 0.45)
+@export var color_visitada := Color(0.35, 0.35, 0.45, 0.6)
+@export var color_no_visitada := Color(0.15, 0.15, 0.20, 0.6)
 @export var grosor_pared := 3.0
 
 
@@ -37,6 +40,12 @@ func celda_a_pixel(celda: Vector2i) -> Vector2:
 func _draw() -> void:
 	if laberinto == null:
 		return
+	if not visitadas.is_empty():
+		for fila in laberinto.alto:
+			for col in laberinto.ancho:
+				var celda := Vector2i(col, fila)
+				var color := color_visitada if visitadas.has(celda) else color_no_visitada
+				draw_rect(Rect2(origen + Vector2(celda) * tam, Vector2(tam, tam)), color)
 	# rejilla tenue de fondo
 	for col in laberinto.ancho + 1:
 		draw_line(origen + Vector2(col * tam, 0),

@@ -52,9 +52,9 @@ func _ready() -> void:
 	_sfx_meta = _crear_sfx("res://assets/sounds/meta.wav")
 	raton.paso_terminado.connect(func(): _sfx_paso.play())
 	raton.choque.connect(func(): _sfx_choque.play())
-	# TODO (PARCIAL · M2): configura vista_mapa_raton con el laberinto que TU
-	# cerebro descubre (Laberinto.vacio + poner_pared al sensar) y redibuja
-	# cada vez que aprenda una pared. Distingue visitadas / no visitadas.
+	if usar_cerebro_estudiante:
+		var ce := cerebro as CerebroEstudiante
+		vista_mapa_raton.configurar(ce.mapa, ORIGEN, tam_celda)
 
 
 func _process(delta: float) -> void:
@@ -73,6 +73,10 @@ func _on_paso_timer_timeout() -> void:
 		_celdas_visitadas[raton.celda] = true
 		_visitadas = _celdas_visitadas.size()
 		visitadas_cambiadas.emit(_visitadas)
+	if usar_cerebro_estudiante:
+		var ce := cerebro as CerebroEstudiante
+		vista_mapa_raton.visitadas = ce.visitadas
+		vista_mapa_raton.queue_redraw()
 	if laberinto.es_meta(raton.celda):
 		_meta_alcanzada()
 
